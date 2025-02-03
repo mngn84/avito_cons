@@ -69,6 +69,7 @@ func (s *avitoService) SendMessage(userId int, chatId string, text string) error
 	
 	return nil
 }
+
 func (s *avitoService) ReadChat(userId int, chatId string) error {
 	ctx := context.Background()
 

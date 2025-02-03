@@ -16,7 +16,7 @@ func New() (*Config, error) {
 		OpenAI: OpenAIConfig{
 			ApiKey:       getEnv("OPENAI_API_KEY", "давжмд жщаз"),
 			Model:        getEnv("OPENAI_MODEL", "gpt-4o"),
-			ApiUrl:       getEnv("OPENAI_API_URL", "https://api.openai.com/v1/"),
+			ApiUrl:       getEnv("OPENAI_URL", "https://api.vsegpt.ru/v1"),
 			SystemPrompt: getEnv("OPENAI_PROMPT", "You are a helpful assistant."),
 			Temperature:  getFloat32("OPENAI_TEMPERATURE", 0.5),
 			Timeout:      getDuration("OPENAI_TIMEOUT", 3*time.Second),
@@ -25,6 +25,16 @@ func New() (*Config, error) {
 			Token:   getEnv("AVITO_TOKEN", "ювьжвям"),
 			ApiUrl:  getEnv("AVITO_API_URL", "https://api.avito.ru/"),
 			timeout: getDuration("AVITO_TIMEOUT", 3*time.Second),
+		},
+		DB: PgConfig{
+			URL:      getEnv("POSTGRES_URL", ""),
+			// Host:     getEnv("POSTGRES_HOST", "localhost"),
+			// Port:     getEnv("POSTGRES_PORT", "5432"),
+			// User:     getEnv("POSTGRES_USER", "postgres"),
+			// Password: getEnv("POSTGRES_PASSWORD", ""),
+			// DbName:   getEnv("POSTGRES_DB", "chatbot"),
+			// SSLMode:  getEnv("POSTGRES_SSL_MODE", "disable"),
+			// HistoryLimit: getInt("POSTGRES_HISTORY_LIMIT", 5),
 		},
 	}
 	if err := cfg.validate(); err != nil {
@@ -63,6 +73,15 @@ func getDuration(key string, defaultVal time.Duration) time.Duration {
     if val := os.Getenv(key); val != "" {
         if d, err := time.ParseDuration(val); err == nil {
             return d
+        }
+    }
+    return defaultVal
+}
+
+func getInt(key string, defaultVal int) int {
+    if val := os.Getenv(key); val != "" {
+        if i, err := strconv.Atoi(val); err == nil {
+            return i
         }
     }
     return defaultVal

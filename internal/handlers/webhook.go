@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	//"fmt"
 	"log/slog"
 	"net/http"
@@ -11,7 +12,7 @@ import (
 )
 
 type WebhookHandler interface {
-	HandleAvitoMsg(msg *handlers_models.FromAvitoMsg) error
+	HandleAvitoMsg(w http.ResponseWriter, msg *handlers_models.FromAvitoMsg) error
 	ServerHTTP(w http.ResponseWriter, r *http.Request)
 }
 
@@ -29,15 +30,18 @@ func NewWebhookHandler(avito services.AvitoService, openai services.OpenAIServic
 	}
 }
 
-func (h *webhookHandler) HandleAvitoMsg(msg *handlers_models.FromAvitoMsg) error {
+func (h *webhookHandler) HandleAvitoMsg(w http.ResponseWriter, msg *handlers_models.FromAvitoMsg) error {
 	h.logger.Info("processing message", "msg", msg)
 
-	// res, err := h.openai.GetResponse(msg.Content.Text)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get response: %w", err)
-	// }
-
-	return nil // h.avito.SendMessage(msg.UserId, msg.ChatId, res)
+	resText, err := h.openai.GetResponse(msg.Content.Text, msg.ChatId, msg.UserId, msg.Created)
+	if err != nil {
+		return fmt.Errorf("failed to get response: %w", err)
+	}
+	// Кодируем результат в JSON и отправляем его в ответ
+	w.Header().Set("Content-Type", "application/json")                       //test
+	w.WriteHeader(http.StatusOK)                                             //test
+	return json.NewEncoder(w).Encode(map[string]string{"response": resText}) //test
+	// return nil  //h.avito.SendMessage(msg.UserId, msg.ChatId, resText)
 }
 
 func (h *webhookHandler) ServerHTTP(w http.ResponseWriter, r *http.Request) {
@@ -58,10 +62,10 @@ func (h *webhookHandler) ServerHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	//w.WriteHeader(http.StatusOK)
 
 	go func() { // можно убрать после реализации очереди
-		if err := h.HandleAvitoMsg(&msg); err != nil {
+		if err := h.HandleAvitoMsg(w, &msg); err != nil {
 			h.logger.Error("failed to handle avito message", "error", err)
 		}
 	}()
