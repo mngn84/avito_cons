@@ -28,13 +28,13 @@ func New() (*Config, error) {
 		},
 		DB: PgConfig{
 			URL:      getEnv("POSTGRES_URL", ""),
+			HistoryLimit: getInt("POSTGRES_LIMIT", 5),
 			// Host:     getEnv("POSTGRES_HOST", "localhost"),
 			// Port:     getEnv("POSTGRES_PORT", "5432"),
 			// User:     getEnv("POSTGRES_USER", "postgres"),
 			// Password: getEnv("POSTGRES_PASSWORD", ""),
 			// DbName:   getEnv("POSTGRES_DB", "chatbot"),
 			// SSLMode:  getEnv("POSTGRES_SSL_MODE", "disable"),
-			// HistoryLimit: getInt("POSTGRES_HISTORY_LIMIT", 5),
 		},
 	}
 	if err := cfg.validate(); err != nil {

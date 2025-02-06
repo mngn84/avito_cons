@@ -33,18 +33,16 @@ func NewSqliteClient(cfg *config.Config, logger *slog.Logger) (*SqliteClient, er
 	return client, nil
 }
 
-// initSchema проверяет и создаёт таблицу, если её нет
 func (c *SqliteClient) initSchema() error {
-	query := `
-	CREATE TABLE IF NOT EXISTS messages (
+	query := `CREATE TABLE IF NOT EXISTS messages (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INTEGER NOT NULL,
 		chat_id TEXT NOT NULL,
 		content TEXT NOT NULL,
 		role TEXT NOT NULL,
 		created_at INTEGER NOT NULL
-	);
-	`
+	);`
+	
 	_, err := c.db.Exec(query)
 	if err != nil {
 		c.log.Error("Failed to initialize database schema", "error", err)
@@ -60,6 +58,7 @@ func (c *SqliteClient) GetMessages(limit int, chatId string) ([]GptMsg, error) {
 
 	rows, err := c.db.Query(query, chatId, limit)
 	if err != nil {
+		c.log.Error("error quering db", "error", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -69,6 +68,7 @@ func (c *SqliteClient) GetMessages(limit int, chatId string) ([]GptMsg, error) {
 		var msg GptMsg
 		err := rows.Scan(&msg.Content, &msg.Role)
 		if err != nil {
+			c.log.Error("error scaning row", "error", err)
 			return nil, err
 		}
 		messages = append(messages, msg)
@@ -78,6 +78,7 @@ func (c *SqliteClient) GetMessages(limit int, chatId string) ([]GptMsg, error) {
 }
 
 func (c *SqliteClient) SaveMsgPair(userMsg DbRow, gptMsg DbRow) error {
+
 	tx, err := c.db.Begin()
 	if err != nil {
 		return err
@@ -88,16 +89,24 @@ func (c *SqliteClient) SaveMsgPair(userMsg DbRow, gptMsg DbRow) error {
 	_, err = tx.Exec(query, userMsg.ChatId, userMsg.UserId, userMsg.Content, userMsg.Role, userMsg.CreatedAt)
 	if err != nil {
 		tx.Rollback()
+		c.log.Info("Ошибка записи userMsg", "error", err)
 		return err
 	}
 
 	_, err = tx.Exec(query, gptMsg.ChatId, gptMsg.UserId, gptMsg.Content, gptMsg.Role, gptMsg.CreatedAt)
 	if err != nil {
 		tx.Rollback()
+		c.log.Info("Ошибка записи gptMsg", "error", err)
 		return err
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		c.log.Info("Ошибка коммита транзакции", "error", err)
+		return err
+	}
+
+	return nil
 }
 
 func (c *SqliteClient) DB() *sql.DB {

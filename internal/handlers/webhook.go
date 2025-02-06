@@ -12,7 +12,7 @@ import (
 )
 
 type WebhookHandler interface {
-	HandleAvitoMsg(w http.ResponseWriter, msg *handlers_models.FromAvitoMsg) error
+	HandleAvitoMsg(msg *handlers_models.FromAvitoMsg) (string, error)
 	ServerHTTP(w http.ResponseWriter, r *http.Request)
 }
 
@@ -30,18 +30,16 @@ func NewWebhookHandler(avito services.AvitoService, openai services.OpenAIServic
 	}
 }
 
-func (h *webhookHandler) HandleAvitoMsg(w http.ResponseWriter, msg *handlers_models.FromAvitoMsg) error {
+func (h *webhookHandler) HandleAvitoMsg(msg *handlers_models.FromAvitoMsg) (string, error) {
 	h.logger.Info("processing message", "msg", msg)
 
 	resText, err := h.openai.GetResponse(msg.Content.Text, msg.ChatId, msg.UserId, msg.Created)
 	if err != nil {
-		return fmt.Errorf("failed to get response: %w", err)
+		return "", fmt.Errorf("failed to get response: %w", err)
 	}
-	// Кодируем результат в JSON и отправляем его в ответ
-	w.Header().Set("Content-Type", "application/json")                       //test
-	w.WriteHeader(http.StatusOK)                                             //test
-	return json.NewEncoder(w).Encode(map[string]string{"response": resText}) //test
-	// return nil  //h.avito.SendMessage(msg.UserId, msg.ChatId, resText)
+
+	h.logger.Info("Generated response", "response", resText)
+	return resText, nil
 }
 
 func (h *webhookHandler) ServerHTTP(w http.ResponseWriter, r *http.Request) {
@@ -63,11 +61,23 @@ func (h *webhookHandler) ServerHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//w.WriteHeader(http.StatusOK)
+	// Обрабатываем сообщение сразу (без горутины)
+	resText, err := h.HandleAvitoMsg(&msg)
+	if err != nil {
+		h.logger.Error("failed to handle avito message", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
-	go func() { // можно убрать после реализации очереди
+	// Отправляем ответ с текстом
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"response": resText})
+
+	/* go func() { // можно убрать после реализации очереди
 		if err := h.HandleAvitoMsg(w, &msg); err != nil {
 			h.logger.Error("failed to handle avito message", "error", err)
 		}
-	}()
+	}() */
 
 }
