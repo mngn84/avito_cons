@@ -7,5 +7,6 @@ require (
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/lib/pq v1.10.9 // indirect
+	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/sashabaranov/go-openai v1.36.1 // indirect
 )

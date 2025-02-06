@@ -20,10 +20,10 @@ type openaiService struct {
 	client *http.Client
 	config *config.Config
 	logger *slog.Logger
-	db     *pg.PgClient
+	db     *pg.SqliteClient/* PgClient */
 }
 
-func NewOpenAIService(config *config.Config, logger *slog.Logger, db *pg.PgClient) OpenAIService {
+func NewOpenAIService(config *config.Config, logger *slog.Logger, db *pg.SqliteClient/* PgClient */) OpenAIService {
 	return &openaiService{
 		client: &http.Client{},
 		config: config,
@@ -71,6 +71,10 @@ func (s *openaiService) GetResponse(text string, chatId string, userId int, crea
 		s.logger.Error("Ошибка запроса к OpenAI", "error", err)
 	}
 
+	if len(res.Choices) == 0 {
+		return "", fmt.Errorf("OpenAI вернул пустой ответ")
+	}
+
 	userMsg := pg.DbRow{
 		ChatId:    chatId,
 		UserId:    userId,
@@ -94,9 +98,6 @@ func (s *openaiService) GetResponse(text string, chatId string, userId int, crea
 		s.logger.Error("Failed to save message to database", "error", err)
 	}
 
-	if len(res.Choices) == 0 {
-		return "", fmt.Errorf("OpenAI вернул пустой ответ")
-	}
 
 	return res.Choices[0].Message.Content, nil
 }
