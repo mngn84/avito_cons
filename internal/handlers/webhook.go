@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	//"fmt"
 	"log/slog"
 	"net/http"
 
@@ -12,7 +11,7 @@ import (
 )
 
 type WebhookHandler interface {
-	HandleAvitoMsg(msg *handlers_models.FromAvitoMsg) (string, error)
+	HandleAvitoMsg(msg *handlers_models.FromAvitoMsg) (string, error) //error
 	ServerHTTP(w http.ResponseWriter, r *http.Request)
 }
 
@@ -33,13 +32,18 @@ func NewWebhookHandler(avito services.AvitoService, openai services.OpenAIServic
 func (h *webhookHandler) HandleAvitoMsg(msg *handlers_models.FromAvitoMsg) (string, error) {
 	h.logger.Info("processing message", "msg", msg)
 
-	resText, err := h.openai.GetResponse(msg.Content.Text, msg.ChatId, msg.UserId, msg.Created)
+	itemInfo, err := h.avito.GetItemInfo(msg.UserId, msg.ChatId)
 	if err != nil {
-		return "", fmt.Errorf("failed to get response: %w", err)
+		h.logger.Error("failed to get item info", "error", err)
 	}
 
-	h.logger.Info("Generated response", "response", resText)
-	return resText, nil
+	res, err := h.openai.GetResponse(msg.Content.Text, msg.ChatId, msg.UserId, msg.Created, itemInfo.Context.Value)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to get response: %w", err)//fmt.Errorf("failed to get response: %w", err)
+	}
+
+	return res, nil//h.avito.SendMessage(msg.UserId, msg.ChatId, res)
 }
 
 func (h *webhookHandler) ServerHTTP(w http.ResponseWriter, r *http.Request) {
@@ -50,9 +54,8 @@ func (h *webhookHandler) ServerHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var msg handlers_models.FromAvitoMsg
+	msg := handlers_models.FromAvitoMsg{}
 	decoder := json.NewDecoder(r.Body)
-	// decoder.DisallowUnknownFields() // проверка на наличие неизвестных полей
 
 	if err := decoder.Decode(&msg); err != nil {
 		h.logger.Error("failed to decode request body", "error", err)
@@ -60,7 +63,13 @@ func (h *webhookHandler) ServerHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//w.WriteHeader(http.StatusOK)
+	if msg.AuthorId == 0 || msg.ChatId == "" {
+		h.logger.Info("Invalid message received, skipping processing", "msg", msg)
+		http.Error(w, "Invalid message data", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 	// Обрабатываем сообщение сразу (без горутины)
 	resText, err := h.HandleAvitoMsg(&msg)
 	if err != nil {
@@ -74,10 +83,10 @@ func (h *webhookHandler) ServerHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"response": resText})
 
-	/* go func() { // можно убрать после реализации очереди
-		if err := h.HandleAvitoMsg(w, &msg); err != nil {
-			h.logger.Error("failed to handle avito message", "error", err)
-		}
-	}() */
+	// go func() { // можно убрать после реализации очереди
+	// 	if err := h.HandleAvitoMsg(&msg); err != nil {
+	// 		h.logger.Error("failed to handle avito message", "error", err)
+	// 	}
+	// }()
 
 }

@@ -45,3 +45,23 @@ const (
 type ReadChatResponse struct {
 	Ok OK `json:"ok"`
 }
+
+// getChatInfoResponse
+type Value struct {
+	Id int `json:"id"`
+	PriceString string `json:"price_string"`
+	StatusId int8 `json:"status_id"`
+	Title string `json:"title"`
+	Url string `json:"url"`
+	UserId int `json:"user_id"`
+
+} 
+
+type Context struct {
+	Type  string `json:"type"`
+	Value Value `json:"value"`
+}
+
+type GetChatInfoResponse struct{
+	Context Context `json:"context"`
+}

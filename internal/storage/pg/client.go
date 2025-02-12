@@ -2,7 +2,6 @@ package pg
 
 import (
 	"database/sql"
-	// "fmt"
 	"log/slog"
 
 	_ "github.com/lib/pq"
@@ -12,27 +11,24 @@ import (
 
 type PgClient struct {
 	db  *sql.DB
-	log *slog.Logger
+	logger *slog.Logger
 }
 
 func NewPgClient(cfg *config.Config, logger *slog.Logger) (*PgClient, error) {
-	/* 	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		cfg.DB.Host, cfg.DB.Port, cfg.DB.User, cfg.DB.Password, cfg.DB.DbName,
-	) */
-
-	db, err := sql.Open("postgres", cfg.DB.URL /* connStr */)
+	db, err := sql.Open("postgres", cfg.DB.URL)
 	if err != nil {
 		return nil, err
 	}
 
 	return &PgClient{
 		db:  db,
-		log: logger,
+		logger: logger,
 	}, nil
 }
 
 func (c *PgClient) GetMessages(limit int, chatId string) ([]GptMsg, error) {
+	c.logger.Info("GetMessages", "chatId", chatId)
+
 	query := `SELECT content, role
     FROM messages
      WHERE chat_id = $1
@@ -44,6 +40,8 @@ func (c *PgClient) GetMessages(limit int, chatId string) ([]GptMsg, error) {
 		return nil, err
 	}
 	defer rows.Close()
+
+	c.logger.Info("GetMessages", "rows", rows)
 
 	var messages []GptMsg
 	for rows.Next() {
@@ -57,11 +55,13 @@ func (c *PgClient) GetMessages(limit int, chatId string) ([]GptMsg, error) {
 		}
 		messages = append(messages, msg)
 	}
+	c.logger.Info("GetMessages", "messages", messages)
 
 	return messages, nil
 }
 
 func (c *PgClient) SaveMsgPair(userMsg DbRow, gptMsg DbRow) error {
+	c.logger.Info("SaveMsgPair", "userMsg", userMsg, "gptMsg", gptMsg)
 	tx, err := c.db.Begin()
 	if err != nil {
 		return err
@@ -96,6 +96,7 @@ func (c *PgClient) SaveMsgPair(userMsg DbRow, gptMsg DbRow) error {
 		return err
 	}
 
+	c.logger.Info("SaveMsgPair", "tx", tx)
 	return tx.Commit()
 }
 

@@ -10,20 +10,20 @@ import (
 func New() (*Config, error) {
 	cfg := &Config{
 		Webhook: WebhookConfig{
-			Host: getEnv("WEBHOOK_HOST", "localhost"),
-			Port: getEnv("WEBHOOK_PORT", "8080"),
+			Host: getEnv("WEBHOOK_HOST", "0:0:0:0"),
+			Port: getEnv("WEBHOOK_PORT", "10000"),
 		},
 		OpenAI: OpenAIConfig{
-			ApiKey:       getEnv("OPENAI_API_KEY", "давжмд жщаз"),
+			ApiKey:       getEnv("OPENAI_API_KEY", ""),
 			Model:        getEnv("OPENAI_MODEL", "gpt-4o"),
-			ApiUrl:       getEnv("OPENAI_URL", "https://api.vsegpt.ru/v1"),
+			ApiUrl:       getEnv("OPENAI_URL", "https://api.openai.com/v1/"),
 			SystemPrompt: getEnv("OPENAI_PROMPT", "You are a helpful assistant."),
 			Temperature:  getFloat32("OPENAI_TEMPERATURE", 0.5),
 			Timeout:      getDuration("OPENAI_TIMEOUT", 3*time.Second),
 		},
 		Avito: AvitoConfig{
-			Token:   getEnv("AVITO_TOKEN", "ювьжвям"),
-			ApiUrl:  getEnv("AVITO_API_URL", "https://api.avito.ru/"),
+			Token:   getEnv("AVITO_TOKEN", ""),
+			ApiUrl:  getEnv("AVITO_API_URL", "https://api.avito.ru"),
 			timeout: getDuration("AVITO_TIMEOUT", 3*time.Second),
 		},
 		DB: PgConfig{

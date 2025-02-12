@@ -41,7 +41,7 @@ func main() {
 
 	r := chi.NewRouter()
 
-	db, err := pg.NewSqliteClient(cfg, logger) // sqliteClient!!!!
+	db, err := pg.NewPgClient(cfg, logger) // sqliteClient!!!!
 	if err != nil {
 		log.Fatal("DB error: ", err)
 	}
@@ -61,9 +61,9 @@ func main() {
 		Handler: r,
 	}
 
-	// if err := runMigrations(db.DB()); err != nil {
-	// 	log.Println("Failed to run migrations:", err)
-	// }
+	if err := runMigrations(db.DB()); err != nil {
+		log.Println("Failed to run migrations:", err)
+	}
 
 	e := server.ListenAndServe()
 
@@ -73,6 +73,7 @@ func main() {
 }
 
 func runMigrations(db *sql.DB) error {
+	log.Println("Running migrations...")
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return err
@@ -91,6 +92,6 @@ func runMigrations(db *sql.DB) error {
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
-
+log.Println("Migrations completed successfully.")
 	return nil
 }
