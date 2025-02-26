@@ -40,10 +40,10 @@ func (h *webhookHandler) HandleAvitoMsg(msg *handlers_models.FromAvitoMsg) (stri
 	res, err := h.openai.GetResponse(msg.Content.Text, msg.ChatId, msg.UserId, msg.Created, itemInfo.Context.Value)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to get response: %w", err)//fmt.Errorf("failed to get response: %w", err)
+		return "", fmt.Errorf("failed to get response: %w", err) //fmt.Errorf("failed to get response: %w", err)
 	}
 
-	return res, nil//h.avito.SendMessage(msg.UserId, msg.ChatId, res)
+	return res, nil //h.avito.SendMessage(msg.UserId, msg.ChatId, res)
 }
 
 func (h *webhookHandler) ServerHTTP(w http.ResponseWriter, r *http.Request) {

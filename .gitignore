@@ -3,3 +3,7 @@ cody_chat.go
 .env
 dist/
 ww
+static
+Makefile
+internal/auth
+migrations

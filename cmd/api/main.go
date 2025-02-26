@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"log/slog"
@@ -10,8 +9,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-migrate/migrate"
-	"github.com/golang-migrate/migrate/database/postgres"
 	"github.com/joho/godotenv"
 
 	_ "github.com/golang-migrate/migrate/source/file"
@@ -41,13 +38,14 @@ func main() {
 
 	r := chi.NewRouter()
 
-	db, err := pg.NewPgClient(cfg, logger) // sqliteClient!!!!
+	db, err := pg.NewPgClient(cfg, logger)
 	if err != nil {
 		log.Fatal("DB error: ", err)
 	}
 
 	avito := services.NewAvitoService(cfg, logger)
 	openai := services.NewOpenAIService(cfg, logger, db)
+	upload := services.NewUploadService(openai, logger)
 	h := handlers.NewWebhookHandler(avito, openai, logger)
 
 	r.Use(middleware.Logger)
@@ -55,14 +53,11 @@ func main() {
 
 	r.Post("/webhook", h.ServerHTTP)
 	r.Get("/health", handlers.HealthCheckHandler())
+	r.Post("/upload", handlers.UploadFileHandler(upload))
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Webhook.Port,
 		Handler: r,
-	}
-
-	if err := runMigrations(db.DB()); err != nil {
-		log.Println("Failed to run migrations:", err)
 	}
 
 	e := server.ListenAndServe()
@@ -70,28 +65,4 @@ func main() {
 	if e != nil {
 		log.Fatal("Server error: ", e)
 	}
-}
-
-func runMigrations(db *sql.DB) error {
-	log.Println("Running migrations...")
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		return err
-	}
-
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://./migrations",
-		"postgres",
-		driver,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
-		return err
-	}
-log.Println("Migrations completed successfully.")
-	return nil
 }
